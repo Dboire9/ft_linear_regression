@@ -1,95 +1,111 @@
 from ft_linear import estimate_price
 import csv
 import matplotlib.pyplot as plt
-import pandas as pd
-import sys
 
 def main():
-	# try:
-	# 	assert len(sys.argv) == 2, "Please enter only 3 arguments"
-	# 	assert sys.argv[1] == "data.csv", "data.csv expected"
-	# except AssertionError as e:
-	# 	print(e)
-	# 	return
 
 	with open('data.csv', newline='') as csvfile:
 		data = list(csv.reader(csvfile))
 		data = data[1:]
-	data = normalisation(data)
+
+	mileage = [int(item[0]) for item in data]
+	print(mileage)
+	price = [int(item[1]) for item in data]
+	print(price)
+
+	mileage_norm = normalization(mileage)
+	price_norm = normalization(price)
+	
+	mileage = [int(item[0]) for item in data]
+	price = [int(item[1]) for item in data]
+
 	for i in range(len(data)):
-		plt.scatter(data[i][0], data[i][1])
-	# mean_squared_error(data)
-	with open('theta_values.csv', newline='') as csvfile:
-		data_theta = list(csv.reader(csvfile))
-	epochs = 1000
-	for i in range(0, epochs):
-		linear_regression(data)
-		plt.plot([float(data_theta[0][0]), float(data_theta[0][1])])
+		plt.scatter(mileage, price)
+
+	epochs = 2000
+	learning_rate = 0.1
+	calctheta0 = 0
+	calctheta1 = 0
+	MSE = []
+	
+	for _ in range(epochs):
+		tmp_theta0 = calctheta0 - learning_rate * calculating_tmptheta0(mileage_norm, price_norm)
+		tmp_theta1 = calctheta1 - learning_rate * calculating_tmptheta1(mileage_norm, price_norm)
+		calctheta0 = tmp_theta0
+		calctheta1 = tmp_theta1
+		
+		file = open("theta_values.csv", "w")
+		file.write(str(calctheta0) + ", " + str(calctheta1))
+		file.close()
+
+		MSE.append(mean_squared_error(mileage_norm, price_norm))
+
+	x_values = [0, 1]
+	y_values = [estimate_price(x) for x in x_values]
+	denormalize(x_values, mileage)
+	denormalize(y_values, price)
+
+	plt.plot(x_values, y_values, label="Theta Line")
 	plt.show()
+	
+	plt.plot(MSE)
+	plt.title("MEAN SQUARED ERROR")
+	plt.xlabel("Epoch")
+	plt.ylabel("Error")
+	plt.show()
+
+	denormalize(mileage_norm, mileage)
+	denormalize(price_norm, price)
 	return
 
-def mean_squared_error(data):
+
+
+
+
+
+def mean_squared_error(mileage, price):
+	"""Mean squared error function to see the curve of the error in training"""
 	mean = 0
-	for i in range(1, len(data)):
-		mean = mean + pow((float(data[i][1]) - estimate_price(data[i][0])), 2)
-		i += 1
-	mean = mean / (len(data) - 1)
-	return mean
-
-def linear_regression(data):
-	learning_rate = 0.1
-	with open('theta_values.csv', newline='') as csvfile:
-		data_theta = list(csv.reader(csvfile))
-	calctheta0 = calculating_tmptheta0(data)
-	calctheta1 = calculating_tmptheta1(data)
-	tmptheta0 = float(data_theta[0][0]) - learning_rate * calctheta0
-	tmptheta1 = float(data_theta[0][1]) - learning_rate * calctheta1
-	print(tmptheta0)
-	print(tmptheta1)
-	file = open("theta_values.csv", "w")
-	file.write(str(tmptheta0) + ", " + str(tmptheta1))
-	file.close()
+	for i in range(0, len(mileage)):
+		mean += (price[i] - estimate_price(mileage[i])) **2
+	return mean / (len(mileage))
 
 
-def calculating_tmptheta0(data):
+def calculating_tmptheta0(mileage, price):
+	"""Calulating theta0 as 1/m of m-1∑i=0 (estimatePrice(mileage[i]) - price[i])"""
 	mean = 0
-	for i in range(1, len(data)):
-		mean = mean + (estimate_price(data[i][0]) - float(data[i][1]))
-	mean = mean / (len(data))
-	return mean
+	for i in range(0, len(mileage)):
+		mean += (estimate_price(mileage[i]) - price[i])
+	return mean / len(mileage)
 
-def calculating_tmptheta1(data):
+def calculating_tmptheta1(mileage, price):
+	"""Calulating theta1 as 1/m of m-1∑i=0 (estimatePrice(mileage[i]) - price[i]) * mileage[i]"""
 	mean = 0
-	for i in range(1, len(data)):
-		mean = mean + ((estimate_price(data[i][0]) - float(data[i][1])) * float(data[i][0]))
-	mean = mean / (len(data))
-	return mean
-	
-def normalisation(data):
-	max_x = 0
-	max_y = 0
-	for i in range(len(data)):
-		if(float(data[i][0]) > max_x):
-			max_x = float(data[i][0])
-		if(float(data[i][1]) > max_y):
-			max_y = float(data[i][1])
-			
-	min_x = max_x
-	min_y = max_y
-	for i in range(len(data)):
-		if(float(data[i][0]) < min_x):
-			min_x = float(data[i][0])
-		if(float(data[i][1]) < min_y):
-			min_y = float(data[i][1])
-	
-	print(max_x, max_y)
-	print(min_x, min_y)
-	for i in range(len(data)):
-		data[i][0] = (float(data[i][0]) - min_x) / (max_x - min_x)
-		data[i][1] = (float(data[i][1]) - min_y) / (max_y - min_y)
-		print(data[i][0], data[i][1])
-	return data
-	
+	for i in range(0, len(mileage)):
+		mean += (estimate_price(mileage[i]) - price[i]) * mileage[i]
+	return mean / len(mileage)
+
+
+
+
+
+def normalization(array):
+	"""Normalization of an array using the min/max normalization x[i] = (x[i] - min_arr) / (max_arr - min_arr))"""
+	max_arr = max(array)
+	min_arr = min(array)
+
+	for i in range(len(array)):
+		array[i] = (array[i] - min_arr) / (max_arr - min_arr)
+	return array
+
+def denormalize(array_norm, array):
+	"""Denormalization of an array using the min/max denormalization x[i] = x[i] * (max_arr - min_arr) + min_arr"""
+	max_arr = max(array)
+	min_arr = min(array)
+
+	for i in range(len(array_norm)):
+		array_norm[i] = array_norm[i] * (max_arr - min_arr) + min_arr
+		# print(array[i])
 
 if __name__ == "__main__":
 	main()
